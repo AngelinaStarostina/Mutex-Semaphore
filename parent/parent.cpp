@@ -67,6 +67,12 @@ int main(int argc, char *argv[])
 
 	ReleaseSemaphore(semaphore, 1, NULL);
 
+	CloseHandle(semaphore);
+	for (int i = 0; i < 4; i++)
+		CloseHandle(EventParent[i]);
+	for (int i = 0; i < 4; i++)
+		CloseHandle(handleArray[i]);
+
 	system("pause");
 	return 1;
 }

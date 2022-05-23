@@ -101,6 +101,14 @@ int main()
 	}
 
 	delete[] name;
+	CloseHandle(hMutex);
+	CloseHandle(semaphore);
+	for (int i = 0; i < 4; i++)
+		CloseHandle(EventParent[i]);
+	CloseHandle(event4);
+	CloseHandle(event3);
+	CloseHandle(event2);
+	CloseHandle(event1);
 
 	system("pause");
 

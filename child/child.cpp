@@ -56,6 +56,11 @@ int main(int argc, char *argv[])
 	getMessage(pos + 1);
 
 	ReleaseMutex(hMutex);
+
+	CloseHandle(hMutex);
+	for (int i = 0; i < 4; i++)
+		CloseHandle(EventParent[i]);
+
 	system("pause");
 	return 1;
 }
