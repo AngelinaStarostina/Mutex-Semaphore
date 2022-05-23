@@ -1,65 +1,108 @@
-#include <iostream>
 #include <windows.h>
+#include <iostream>
+#include <conio.h>
+#pragma warning(disable : 4996)
+
 using namespace std;
 
-HANDLE hInEvent;
-CHAR lpEventName[] = "InEventName";
+HANDLE event1;
+HANDLE event2;
+HANDLE event3;
+HANDLE event4;
+HANDLE *EventParent = new HANDLE[4];
+HANDLE semaphore;
+HANDLE hMutex;
+
+struct ProcessInformation {
+	STARTUPINFO info;
+	PROCESS_INFORMATION processInformation;
+
+	ProcessInformation() {
+		ZeroMemory(&info, sizeof(STARTUPINFO));
+		info.cb = sizeof(STARTUPINFO);
+	}
+};
+
+void sendMessage(int type) {
+	switch (type) {
+	case 1:
+		SetEvent(event1);
+		break;
+	case 2:
+		SetEvent(event2);
+		break;
+	case 3:
+		SetEvent(event3);
+		break;
+	case 4:
+		SetEvent(event4);
+	}
+}
+
+
 
 int main()
 {
-	hInEvent = CreateEvent(NULL, FALSE, FALSE, lpEventName);
+	setlocale(LC_ALL, "Russian");
 
-	setlocale(LC_ALL, "rus");
+	event1 = CreateEvent(NULL, FALSE, FALSE, "Event1");
+	event2 = CreateEvent(NULL, FALSE, FALSE, "Event2");
+	event3 = CreateEvent(NULL, FALSE, FALSE, "Event3");
+	event4 = CreateEvent(NULL, FALSE, FALSE, "Event4");
+	char* name = new char[2];
+	for (int i = 0; i < 4; i++)
+	{
+		_itoa(i, name, 10);
+		EventParent[i] = CreateEvent(NULL, FALSE, FALSE, name);
+	}
+	semaphore = CreateSemaphore(NULL, 2, 2, "Semaphore");
+	hMutex = CreateMutex(NULL, FALSE, "Mutex");
+
 	int numParent, numChild;
 	cout << "¬ведите количество процессов Parent: ";
 	cin >> numParent;
 	cout << "¬ведите количество процессов Child: ";
 	cin >> numChild;
 
+	ProcessInformation **processInformation;
+	processInformation = new ProcessInformation*[numChild + numParent];
+
+	char parentCommandLine[] = "Parent.exe";
+	char childCommandLine[] = "Child.exe";
+	for (int i = 0; i < numChild; i++) {
+		processInformation[i] = new ProcessInformation();
+		if (!CreateProcess(NULL, childCommandLine, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &processInformation[i]->info, &processInformation[i]->processInformation)) {
+			cout << "Child not created\n";
+		}
+	}
+	for (int i = 0; i < numParent; i++) {
+		processInformation[i + 1] = new ProcessInformation();
+		if (!CreateProcess(NULL, parentCommandLine, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &processInformation[i + 1]->info, &processInformation[i + 1]->processInformation)) {
+			cout << "Parent not created\n";
+		}
+	}
+
 	int numMessParent, numMessChild;
 	cout << "¬ведите количество сообщений, отправленых Parent: ";
 	cin >> numMessParent;
-	cout << "¬ведите количество  сообщений, отправленых Child: ";
-	cin >> numMessChild;
 
-	STARTUPINFO si;
-	PROCESS_INFORMATION *piParent = new PROCESS_INFORMATION[numParent];
-	ZeroMemory(&si, sizeof(STARTUPINFO));
-	si.cb = sizeof(STARTUPINFO);
+	int message;
+	for (int i = 0; i < numMessParent; i++) {
 
-	HANDLE* hParent = new HANDLE[numParent];
-	char parentCommandLine[] = "Parent.exe";
-	for (int i = 0; i < numParent; i++)
-	{
-		CreateProcess(NULL, parentCommandLine, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &piParent[i]);
+		if (i != 0)
+			cout << "ќтправлено сообщение" << message << endl;
+
+		cout << "¬ведите сообщение (число от 1 до 4):\n";
+		cin >> message;
+		if (message < 1 || message > 4)
+			i--;
+
+		sendMessage(message);
 	}
 
-	for (int i = 0; i < numParent; i++)
-	{
-		hParent[i] = piParent[i].hProcess;
-	}
-	SetEvent(hInEvent);
+	delete[] name;
 
-
-	HANDLE* hChild = new HANDLE[numChild];
-	char childCommandLine[] = "Child.exe";
-	PROCESS_INFORMATION *piChild = new PROCESS_INFORMATION[numChild];
-	for (int i = 0; i < numParent; i++)
-	{
-		CreateProcess(NULL, childCommandLine, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &piChild[i]);
-	}
-	for (int i = 0; i < numParent; i++)
-	{
-		hChild[i] = piChild[i].hProcess;
-	}
-
-	WaitForMultipleObjects(numChild, hChild, TRUE, INFINITE);
-
-	for (int i = 0; i < numParent; i++)
-	{
-		CloseHandle(piParent[i].hProcess);
-		CloseHandle(piChild[i].hProcess);
-	}
+	system("pause");
 
 	return 0;
 }
